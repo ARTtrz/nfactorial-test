@@ -1,6 +1,6 @@
 import pygame
 from pygame.locals import *
-import pickle
+import gzip, pickle
 from os import path
 
 pygame.init()
@@ -11,16 +11,36 @@ pygame.init()
 
 screen_width = 1000
 screen_height = 1000
-
+font = pygame.font.SysFont('Bauhaus 93', 70)
+font_score = pygame.font.SysFont('Bauhaus 93', 30)
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption('Nfactorial 2023 Game ')
 
 #define game variables
+level = 0
 tile_size = 50
 game_over = 0
 max_levels = 2
+score = 0
 
+#define colours
+white = (255, 255, 255)
+blue = (0, 0, 255)
 
+def draw_text(text, font, text_col, x, y):
+	img = font.render(text, True, text_col)
+	screen.blit(img, (x, y))
+	
+def reset_level():
+	player.reset(100, screen_height - 130)
+	blob_group.empty()
+	lava_group.empty()
+	exit_group.empty()
+
+	#load in level data and create world
+	world = World(world1_data)
+
+	return world
 
 #load images
 sun_img = pygame.image.load('img/sun.png')
@@ -141,6 +161,8 @@ class Player():
 			if pygame.sprite.spritecollide(self, lava_group, False):
 				game_over = -1
 
+			if pygame.sprite.spritecollide(self, exit_group, False):
+				game_over = 1
 			#update player coordinates
 			self.rect.x += dx
 			self.rect.y += dy
@@ -276,7 +298,12 @@ class World():
 				if tile == 6:
 					lava = Lava(col_count * tile_size, row_count * tile_size + (tile_size // 2))
 					lava_group.add(lava)
-					
+				if tile == 7:
+					coin = Coin(col_count * tile_size + (tile_size // 2), row_count * tile_size + (tile_size // 2))
+					coin_group.add(coin)
+				if tile == 8:
+					exit = Exit(col_count * tile_size, row_count * tile_size - (tile_size // 2))
+					exit_group.add(exit)
 				col_count += 1
 				
 			row_count += 1
@@ -312,12 +339,28 @@ class Lava(pygame.sprite.Sprite):
 		self.rect.x = x
 		self.rect.y = y
 		
-world_data = [
+class Coin(pygame.sprite.Sprite):
+	def __init__(self, x, y):
+		pygame.sprite.Sprite.__init__(self)
+		img = pygame.image.load('img/coin.png')
+		self.image = pygame.transform.scale(img, (tile_size // 2, tile_size // 2))
+		self.rect = self.image.get_rect()
+		self.rect.center = (x, y)
+		
+class Exit(pygame.sprite.Sprite):
+	def __init__(self, x, y):
+		pygame.sprite.Sprite.__init__(self)
+		img = pygame.image.load('img/exit.png')
+		self.image = pygame.transform.scale(img, (tile_size, int(tile_size * 1.5)))
+		self.rect = self.image.get_rect()
+		self.rect.x = x
+		self.rect.y = y
+world1_data = [
 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1], 
-[1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 2, 2, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 7, 0, 5, 0, 0, 0, 1], 
+[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 1, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1], 
+[1, 1, 0, 0, 0, 2, 0, 0, 0, 0, 7, 7, 0, 0, 0, 2, 2, 2, 2, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 7, 0, 5, 0, 0, 0, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1], 
 [1, 7, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
 [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
@@ -335,13 +378,47 @@ world_data = [
 [1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ]
 
+world_data = [
+[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1], 
+[1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 7, 7, 0, 0, 0, 0, 2, 2, 2, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 7, 0, 5, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1], 
+[1, 7, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 0, 0, 0, 0, 1], 
+[1, 0, 2, 0, 0, 7, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 2, 0, 0, 4, 0, 0, 3, 0, 0, 0, 0, 3, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 7, 0, 0, 0, 0, 2, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 2, 2, 2, 2, 1], 
+[1, 0, 0, 0, 0, 0, 2, 2, 2, 6, 6, 6, 6, 6, 1, 1, 1, 1, 1, 1], 
+[1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
+[1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
+[1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+]
+
+
+
 
 
 player = Player(100, screen_height - 130)
 player2 = Player2(100, screen_height - 130)
 
+coin_group = pygame.sprite.Group()
 blob_group = pygame.sprite.Group()
 lava_group = pygame.sprite.Group()
+exit_group = pygame.sprite.Group()
+
+#create dummy coin for showing the score
+score_coin = Coin(tile_size // 2, tile_size // 2)
+coin_group.add(score_coin)
+
+world = World(world_data)
+
 world = World(world_data)
 
 #all buttons
@@ -350,31 +427,59 @@ restart_button = Button(screen_width // 2 - 50, screen_height // 2 + 100, restar
 run = True
 while run:
 
-	clock.tick(fps)
+    clock.tick(fps)
 
-	screen.blit(bg_img, (0, 0))
-	screen.blit(sun_img, (100, 100))
+    screen.blit(bg_img, (0, 0))
+    screen.blit(sun_img, (100, 100))
 
-	world.draw()
+    world.draw()
 
-	if game_over == 0:
-		blob_group.update()
+    if game_over == 0:
+        blob_group.update()
 	
-	blob_group.draw(screen)
-	lava_group.draw(screen)
-
-	game_over = player.update(game_over)
+        if pygame.sprite.spritecollide(player, coin_group, True):
+            score += 1
+        draw_text('X ' + str(score), font_score, white, tile_size - 10, 10)
 	
-	if game_over == -1:
-		if restart_button.draw():
-			player.reset(100, screen_height - 130)
-			game_over = 0
-	
+    blob_group.draw(screen)
+    lava_group.draw(screen)
+    exit_group.draw(screen)
+    coin_group.draw(screen)
 
-	for event in pygame.event.get():
-		if event.type == pygame.QUIT:
-			run = False
+    game_over = player.update(game_over)
 
-	pygame.display.update()
+    
+
+    if game_over == -1:
+        if restart_button.draw():
+            player.reset(100, screen_height - 130)
+            game_over = 0
+
+    if game_over == 1:
+        #reset game and go to next level
+        level += 1
+        
+        if level == max_levels:
+            draw_text('YOU WIN!', font, blue, (screen_width // 2) - 140, screen_height // 2)
+        if level < max_levels:
+            #reset level
+            world_data = []
+            world = reset_level()
+            game_over = 0
+        else:
+            draw_text('YOU WIN!', font, blue, (screen_width // 2) - 140, screen_height // 2)
+            if restart_button.draw():
+                level = 1
+                #reset level
+                world_data = []
+                world = reset_level()
+                game_over = 0
+                score = 0
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+
+    pygame.display.update()
 
 pygame.quit()
