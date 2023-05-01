@@ -1,7 +1,9 @@
+
 import pygame
 from pygame.locals import *
-import gzip, pickle
+import  pickle
 from os import path
+
 
 pygame.init()
 
@@ -23,6 +25,7 @@ game_over = 0
 game_over_2 = 0
 max_levels = 2
 score = 0
+move = False
 
 
 #define colours
@@ -38,6 +41,7 @@ def reset_level():
 	blob_group.empty()
 	lava_group.empty()
 	exit_group.empty()
+	stone_group.empty()
 
 	#load in level data and create world
 	world = World(world1_data)
@@ -53,7 +57,6 @@ restart_img = pygame.image.load('img/restart_btn.png')
 #	for line in range(0, 20):
 #		pygame.draw.line(screen, (255, 255, 255), (0, line * tile_size), (screen_width, line * tile_size))
 #		pygame.draw.line(screen, (255, 255, 255), (line * tile_size, 0), (line * tile_size, screen_height))
-		
 
 class Button():
 	def __init__(self, x, y, image):
@@ -180,6 +183,9 @@ class Player():
 			#check for collision with lava
 			if pygame.sprite.spritecollide(self, lava_group, False):
 				game_over = -1
+
+
+		
 
 			if pygame.sprite.spritecollide(self, exit_group, False):
 				game_over = 1
@@ -318,7 +324,14 @@ class Player2():
 			if pygame.sprite.spritecollide(self, blob_group, False):
 				over = -1
 				
+			if pygame.sprite.spritecollide(self, stone_group, False):
+				move = True
+	
 
+
+			
+			
+			
 			#check for collision with lava
 			if pygame.sprite.spritecollide(self, lava_group, False):
 				
@@ -370,7 +383,7 @@ class Player2():
 
 
 class World():
-	def __init__(self, data):
+	def __init__(self,data):
 		self.tile_list = []
 
 		#load images
@@ -399,6 +412,8 @@ class World():
 					blob = Enemy(col_count * tile_size, row_count * tile_size + 15)
 					blob_group.add(blob)
 				if tile == 4:
+					
+				
 					platform = Platform(col_count * tile_size, row_count * tile_size, 1, 0)
 					platform_group.add(platform)
 				if tile == 5:
@@ -413,6 +428,7 @@ class World():
 				if tile == 8:
 					exit = Exit(col_count * tile_size, row_count * tile_size - (tile_size // 2))
 					exit_group.add(exit)
+
 				col_count += 1
 				
 			row_count += 1
@@ -421,6 +437,8 @@ class World():
 		for tile in self.tile_list:
 			screen.blit(tile[0], tile[1])
 			
+
+
 
 class Platform(pygame.sprite.Sprite):
 	def __init__(self, x, y, move_x, move_y):
@@ -435,7 +453,6 @@ class Platform(pygame.sprite.Sprite):
 		self.move_x = move_x
 		self.move_y = move_y
 
-
 	def update(self):
 		self.rect.x += self.move_direction * self.move_x
 		self.rect.y += self.move_direction * self.move_y
@@ -443,6 +460,18 @@ class Platform(pygame.sprite.Sprite):
 		if abs(self.move_counter) > 50:
 			self.move_direction *= -1
 			self.move_counter *= -1
+	
+
+
+class Stone(pygame.sprite.Sprite):
+	def __init__(self, x, y):
+		pygame.sprite.Sprite.__init__(self)
+		img = pygame.image.load('img/platform_x.png')
+		self.image = pygame.transform.scale(img, (tile_size, tile_size // 2))
+		self.rect = self.image.get_rect()
+		self.rect.x = x
+		self.rect.y = y
+		
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -489,17 +518,17 @@ class Exit(pygame.sprite.Sprite):
 		self.rect.y = y
 world1_data = [
 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
-[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 1, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1], 
 [1, 1, 0, 0, 0, 2, 0, 0, 0, 0, 7, 7, 0, 0, 0, 2, 2, 2, 2, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 7, 0, 5, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 7, 0, 0, 0, 0, 0, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 1], 
 [1, 7, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
 [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 0, 0, 0, 0, 1], 
-[1, 0, 2, 0, 0, 7, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 2, 0, 0, 4, 0, 0, 3, 0,0 , 0, 0, 3, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], 
+[1, 0, 2, 0, 0, 7, 0, 7, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 2, 2, 0, 4, 0, 0, 1, 1, 6 , 6, 1, 0, 0, 0, 0, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 7, 0, 0, 0, 0, 2, 0, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
@@ -521,12 +550,12 @@ world_data = [
 [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 0, 0, 0, 0, 1], 
 [1, 0, 2, 0, 0, 7, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 2, 0, 0, 4, 0, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 1], 
+[1, 0, 0, 2, 2, 0, 4, 0, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
 [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 7, 0, 0, 0, 0, 2, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
-[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 2, 2, 2, 2, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 1], 
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 2, 1, 1, 1, 1], 
 [1, 0, 0, 0, 0, 0, 2, 2, 2, 6, 6, 6, 6, 6, 1, 1, 1, 1, 1, 1], 
 [1, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
 [1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
@@ -545,14 +574,15 @@ blob_group = pygame.sprite.Group()
 lava_group = pygame.sprite.Group()
 exit_group = pygame.sprite.Group()
 platform_group = pygame.sprite.Group()
+stone_group = pygame.sprite.Group()
 
 #create dummy coin for showing the score
 score_coin = Coin(tile_size // 2, tile_size // 2)
 coin_group.add(score_coin)
 
-world = World(world_data)
+world = World(world1_data)
 
-world = World(world_data)
+
 
 #all buttons
 restart_button = Button(screen_width // 2 - 50, screen_height // 2 + 100, restart_img)
@@ -575,6 +605,8 @@ while run:
 
 		if pygame.sprite.spritecollide(player, coin_group, True):
 			score += 1
+		if pygame.sprite.spritecollide(player2, coin_group, True):
+			score += 1
 		draw_text('X ' + str(score), font_score, white, tile_size - 10, 10)
 	
 	blob_group.draw(screen)
@@ -582,6 +614,7 @@ while run:
 	exit_group.draw(screen)
 	platform_group.draw(screen)
 	coin_group.draw(screen)
+	stone_group.draw(screen)
 
 	game_over_2 = player2.update(game_over_2)
 
